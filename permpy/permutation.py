@@ -22,15 +22,6 @@ import permpy.permset
 
 __author__ = 'Cheyne Homberger, Jay Pantone'
 
-def _is_iter(obj):
-    try:
-        iter(obj)
-        result = True
-    except TypeError:
-        result = False
-    return result
-
-
 # a class for creating permutation objects
 class Permutation(tuple):
     """Class for Permutation objects, representing permutations of an ordered
@@ -49,40 +40,6 @@ class Permutation(tuple):
     insertion_locations = []
 
     # some useful functions for playing with permutations
-    @classmethod
-    def monotone_increasing(cls, n):
-        """Returns a monotone increasing permutation of length n.
-
-        >>> Permutation.monotone_increasing(5)
-        1 2 3 4 5
-        """
-        return cls(range(n))
-
-    @classmethod
-    def monotone_decreasing(cls, n):
-        """Returns a monotone decreasing permutation of length n.
-
-        >>> Permutation.monotone_decreasing(5)
-        5 4 3 2 1
-        """
-        return cls(range(n)[::-1])
-
-    @classmethod
-    def identity(cls, n):
-        """Returns the identity permutation of length n. Same as
-        monotone_increasing."""
-        return cls.monotone_increasing(n)
-
-    @classmethod
-    def random(cls, n):
-        """Outputs a random permutation of length n.
-
-        >>> len( Permutation.random(10) ) == 10
-        True
-        """
-        L = list(range(n))
-        random.shuffle(L)
-        return cls(L)
 
     @classmethod
     def random_avoider(cls, n, B, simple=False, involution=False, verbose=-1):
@@ -134,15 +91,6 @@ class Permutation(tuple):
             return L
 
     @classmethod
-    def standardize(cls, L):
-        """Standardizes a list `L` of unique elements by mapping them to the set
-        {0,1, ..., len(L)} by an order-preserving bijection"""
-        assert len(set(L)) == len(L), 'make sure elements are distinct!'
-        ordered = L[:]
-        ordered.sort()
-        return [ordered.index(x) for x in L]
-
-    @classmethod
     def change_repr(cls, representation=None):
         """Toggles globally between cycle notation or one-line notation. Note
         that internal representation is still one-line."""
@@ -153,38 +101,6 @@ class Permutation(tuple):
             k = int(input('1 for oneline, 2 for cycle, 3 for both\n '))
             k -= 1
             cls._REPR = L[k]
-
-    @classmethod
-    def ind2perm(cls, k, n):
-        """De-indexes a permutation by a bijection from the set S_n to [n!].
-        See also the `Permutation.perm2ind` method.
-
-        Parameters
-        ----------
-        k : int
-            An integer between 0 and n! - 1, to be mapped to S_n.
-        n : int
-            Length of the permutation.
-
-        Returns
-        -------
-        p : Permutation instance
-
-        >>> Permutation.ind2perm(12,8).perm2ind()
-        12
-        """
-
-        result = list(range(n))
-        def swap(i,j):
-            t = result[i]
-            result[i] = result[j]
-            result[j] = t
-        for i in range(n, 0, -1):
-            j = k % i
-            swap(i-1,j)
-            k //= i
-        p = cls(result)
-        return p
 
     @classmethod
     def plentiful(cls, gap):
@@ -266,17 +182,6 @@ class Permutation(tuple):
     def __init__(self,p,n=None):
         self.insertion_locations = [1]*(len(self)+1)
 
-    def __call__(self,i):
-        """Allows permutations to be called as functions. Used extensively for
-        internal methods (e.g., counting cycles). Note that permutations are
-        zero-based internally.
-
-        >>> Permutation(4132)(2)
-        2
-        """
-
-        return self[i]
-
     def oneline(self):
         """Returns the one-line notation representation of the permutation (as a
         sequence of integers 1 through n)."""
@@ -302,30 +207,6 @@ class Permutation(tuple):
 
 
     # __hash__, __eq__, __ne__ inherited from tuple class
-
-    def __mul__(self, other):
-        """Returns the composition of two permutations."""
-        assert len(self) == len(other)
-        L = list(other)
-        for i in range(len(L)):
-            L[i] = self.__call__(L[i])
-        return Permutation(L)
-
-    def __add__(self, other):
-        """Returns the direct sum of two permutations.
-        >>> p = Permutation.monotone_increasing(10)
-        >>> p + p == Permutation.monotone_increasing(20)
-        True
-        """
-        return self.direct_sum(other)
-
-    def __sub__(self, other):
-        """Returns the skew sum of two permutations.
-        >>> p = Permutation.monotone_decreasing(10)
-        >>> p - p == Permutation.monotone_decreasing(20)
-        True
-        """
-        return self.skew_sum(other)
 
     def __pow__(self, power):
         """Returns the permutation raised to a (positive integer) power.
@@ -406,42 +287,6 @@ class Permutation(tuple):
         p = p[:idx] + [val] + p[idx:]
         return Permutation(p)
 
-    def complement(self):
-        """Returns the complement of the permutation. That is, the permutation
-        obtained by subtracting each of the entries from `len(self)`.
-
-        >>> Permutation(2314).complement() == Permutation(3241)
-        True
-        """
-        n = self.__len__()
-        L = [n-1-i for i in self]
-        return Permutation(L)
-
-    def reverse(self):
-        """Returns the reverse of the permutation.
-
-        >>> Permutation(2314).reverse() == Permutation(4132)
-        True
-        """
-        q = list(self)
-        q.reverse()
-        return Permutation(q)
-
-    def inverse(self):
-        """Returns the group-theoretic inverse of the permutation.
-
-        >>> p = Permutation.random(10)
-        >>> p * p.inverse() == Permutation.monotone_increasing(10)
-        True
-        """
-
-        p = list(self)
-        n = self.__len__()
-        q = [0 for j in range(n)]
-        for i in range(n):
-            q[p[i]] = i
-        return Permutation(q)
-
     def _ascii_plot(self):
         """Prints a simple plot of the given Permutation."""
         n = self.__len__()
@@ -476,38 +321,7 @@ class Permutation(tuple):
         cyclelist.reverse()
         return cyclelist
 
-
-    def direct_sum(self, Q):
-        """Calculates and returns the direct sum of two permutations.
-
-        >>> Permutation(312).direct_sum(Permutation(1234))
-        3 1 2 4 5 6 7
-        """
-        return Permutation(list(self)+[i+len(self) for i in Q])
-
-    def skew_sum(self, Q):
-        """Calculates and returns the skew sum of two permutations.
-
-        >>> Permutation(312).skew_sum(Permutation(1234))
-        7 5 6 1 2 3 4
-        """
-        return Permutation([i+len(Q) for i in self]+list(Q))
-
-
     # Permutation Statistics - somewhat self-explanatory
-
-    def fixed_points(self):
-        """Returns the number of fixed points of the permutation.
-
-        >>> Permutation(521436).fixed_points()
-        3
-        """
-        sum = 0
-        for i in range(self.__len__()):
-            if self(i) == i:
-                sum += 1
-        return sum
-
 
     def skew_decomposable(self):
         """Determines whether the permutation is expressible as the skew sum of
@@ -553,89 +367,6 @@ class Permutation(tuple):
         """
 
         return len(self.cycle_decomp())
-
-
-
-    def descent_set(self):
-        """Returns descent set of the permutation
-
-        >>> Permutation(42561873).descent_set()
-        [1, 4, 6, 7]
-        """
-
-        p = list(self)
-        n = self.__len__()
-        descents = []
-        for i in range(1,n):
-            if p[i-1] > p[i]:
-                descents.append(i)
-        return descents
-
-    def num_descents(self):
-        """Returns the number of descents of the permutation
-
-        >>> Permutation(42561873).num_descents()
-        4
-        """
-        return len(self.descent_set())
-
-    def ascent_set(self):
-        """Returns the ascent set of the permutation
-
-        >>> Permutation(42561873).ascent_set()
-        [2, 3, 5]
-        """
-        descents = self.descent_set()
-        return [i for i in range(1, len(self)) if i not in descents]
-
-    def num_ascents(self):
-        """Returns the number of ascents of the permutation
-
-        >>> Permutation(42561873).num_ascents()
-        3
-        """
-        return len(self.ascent_set())
-
-
-    def peak_list(self):
-        """Returns the list of peaks of the permutation.
-
-        >>> Permutation(2341765).peak_list()
-        [2, 4]
-        """
-
-        def check(i):
-            return self[i-1] < self[i] > self[i+1]
-        return [i for i in range(1, len(self)-1) if check(i)]
-
-
-    def num_peaks(self):
-        """Returns the number of peaks of the permutation
-
-        >>> Permutation(2341765).num_peaks()
-        2
-        """
-
-        return len(self.peak_list())
-
-    def valley_list(self):
-        """Returns the list of valleys of the permutation.
-
-        >>> Permutation(3241756).valley_list()
-        [1, 3, 5]
-        """
-
-        return self.complement().peak_list()
-
-
-    def num_valleys(self):
-        """Returns the number of peaks of the permutation
-
-        >>> Permutation(3241756).num_valleys()
-        3
-        """
-
-        return len(self.valley_list())
 
     def bend_list(self):
         """Returns the list of indices at which the permutation changes
@@ -918,46 +649,6 @@ class Permutation(tuple):
                         upper_bound[i] = j
         return (lower_bound, upper_bound)
 
-    def avoids(self, p, lr=0):
-        #TODO Am I correct on the lr?
-        """Check if the permutation avoids the pattern `p`.
-
-        Parameters
-        ----------
-        p : Permutation-like object
-        lr : int
-            Require the last entry to be equal to this
-
-        >>> Permutation(123456).avoids(231)
-        True
-        >>> Permutation(123456).avoids(123)
-        False
-        """
-        if not isinstance(p, Permutation):
-            p = Permutation(p)
-        return not p.involved_in(self, last_require=lr)
-
-    def avoids_set(self, B):
-        """Check if the permutation avoids the set of patterns.
-
-        Parameters
-        ----------
-        B : iterable of Permutation-like objects
-            Can be a PermSet or an iterable of objects which can be coerced to
-            permutations.
-
-        >>> Permutation(123456).avoids_set([321, 213])
-        True
-        >>> Permutation(123456).avoids_set([321, 123])
-        False
-        """
-        for p in B:
-            if not isinstance(p, Permutation):
-                p = Permutation(p)
-            if p.involved_in(self):
-                return False
-        return True
-
     def involves(self, p, lr=0):
         """Check if the permutation avoids the pattern `p`.
 
@@ -1034,14 +725,6 @@ class Permutation(tuple):
 
     def involvement_fits(self, upper_bound, lower_bound, indices, q, next):
         return (lower_bound[next] == -1 or q[indices[next]] > q[indices[lower_bound[next]]]) and (upper_bound[next] == -1 or q[indices[next]] < q[indices[upper_bound[next]]])
-
-
-    def occurrences(self, pattern):
-        total = 0
-        for subseq in itertools.combinations(self, len(pattern)):
-            if Permutation(subseq) == pattern:
-                total += 1
-        return total
 
     def all_intervals(self, return_patterns=False):
         blocks = [[],[]]
